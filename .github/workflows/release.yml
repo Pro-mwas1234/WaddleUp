@@ -135,6 +135,8 @@ jobs:
         run: |
           if [[ -n "$GOOGLE_SERVICES_JSON_BASE64" ]]; then
             echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          elif [[ ! -f app/google-services.json ]]; then
+            echo "::warning::app/google-services.json not found and GOOGLE_SERVICES_JSON_BASE64 secret not set. Build will compile, but Firebase/Google Sign-In requires google-services.json at runtime."
           fi
           if [[ -n "$APP_ENV_FILE" ]]; then
             printf '%s\n' "$APP_ENV_FILE" > .env
