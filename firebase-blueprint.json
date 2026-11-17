@@ -1,0 +1,177 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user's WaddleUp fitness profile, cartoon avatar customization, personal best, active power-up, and daily/weekly step progress (zero PII).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "displayName": { "type": "string", "description": "Playful public nickname (1-30 chars)." },
+        "mascot": {
+          "type": "string",
+          "enum": ["DUCK", "FROG", "SNAIL", "PIGEON", "FLAMINGO", "DINO", "POTATO", "CRAB"],
+          "description": "Selected funny spirit animal mascot."
+        },
+        "avatarCode": { "type": "string", "description": "Encoded cartoon avatar parts (hair:accessory:face:color)." },
+        "bio": { "type": "string", "description": "Short funny walking excuse or bio (0-80 chars)." },
+        "dailyGoal": { "type": "integer", "description": "User's daily step goal (1000-100000)." },
+        "todaySteps": { "type": "integer", "description": "Total steps tracked for todayDate." },
+        "todayDate": { "type": "string", "description": "Current local date string YYYY-MM-DD." },
+        "weeklySteps": { "type": "integer", "description": "Rolling 7-day / current week step total." },
+        "weekStartDate": { "type": "string", "description": "Week start date string YYYY-MM-DD." },
+        "bestDailySteps": { "type": "integer", "description": "All-time personal best single-day step count." },
+        "activePowerUp": {
+          "type": "string",
+          "enum": ["", "SNAILS_PACE", "ROCKET_BOOST", "DISCO_FEVER", "SNACK_MAGNET"],
+          "description": "Currently active power-up mode."
+        },
+        "powerUpExpiresAtMs": { "type": "integer", "description": "Epoch millis when activePowerUp expires." },
+        "dailyHistory": { "type": "object", "description": "Map of YYYY-MM-DD date keys to integer step counts (max 14 entries)." },
+        "totalNudgesSent": { "type": "integer", "description": "Count of playful nudges sent to friends." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "mascot",
+        "bio",
+        "dailyGoal",
+        "todaySteps",
+        "todayDate",
+        "weeklySteps",
+        "weekStartDate",
+        "totalNudgesSent",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Squad": {
+      "title": "Squad",
+      "description": "Friend group competing on daily and weekly step leaderboards.",
+      "type": "object",
+      "properties": {
+        "creatorId": { "type": "string", "description": "UID of the squad creator." },
+        "name": { "type": "string", "description": "Squad display name (2-40 chars)." },
+        "inviteCode": { "type": "string", "description": "6-character uppercase alphanumeric share code." },
+        "motto": { "type": "string", "description": "Funny squad motto (0-80 chars)." },
+        "memberIds": { "type": "array", "description": "Bounded list of member UIDs (max 25)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["creatorId", "name", "inviteCode", "motto", "memberIds", "createdAt", "updatedAt"]
+    },
+    "SquadInvite": {
+      "title": "SquadInvite",
+      "description": "Invite code lookup record keyed by 6-char inviteCode so friends can join without listing all squads.",
+      "type": "object",
+      "properties": {
+        "squadId": { "type": "string", "description": "Target squad document ID." },
+        "squadName": { "type": "string", "description": "Squad display name." },
+        "creatorId": { "type": "string", "description": "UID of squad creator." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." }
+      },
+      "required": ["squadId", "squadName", "creatorId", "createdAt"]
+    },
+    "SquadMember": {
+      "title": "SquadMember",
+      "description": "Member's leaderboard snapshot inside a squad.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the squad member." },
+        "squadId": { "type": "string", "description": "Parent squad document ID." },
+        "displayName": { "type": "string", "description": "Member nickname (1-30 chars)." },
+        "mascot": {
+          "type": "string",
+          "enum": ["DUCK", "FROG", "SNAIL", "PIGEON", "FLAMINGO", "DINO", "POTATO", "CRAB"]
+        },
+        "avatarCode": { "type": "string", "description": "Encoded cartoon avatar parts." },
+        "bio": { "type": "string", "description": "Member funny bio (0-80 chars)." },
+        "dailyGoal": { "type": "integer", "description": "Member daily goal." },
+        "todaySteps": { "type": "integer", "description": "Member daily steps." },
+        "todayDate": { "type": "string", "description": "Date YYYY-MM-DD for todaySteps." },
+        "weeklySteps": { "type": "integer", "description": "Member weekly steps." },
+        "weekStartDate": { "type": "string", "description": "Week start YYYY-MM-DD." },
+        "activePowerUp": {
+          "type": "string",
+          "enum": ["", "SNAILS_PACE", "ROCKET_BOOST", "DISCO_FEVER", "SNACK_MAGNET"]
+        },
+        "powerUpExpiresAtMs": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": [
+        "userId",
+        "squadId",
+        "displayName",
+        "mascot",
+        "bio",
+        "dailyGoal",
+        "todaySteps",
+        "todayDate",
+        "weeklySteps",
+        "weekStartDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FriendNudge": {
+      "title": "FriendNudge",
+      "description": "Playful heckle or cheer sent from one squadmate to another.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "description": "UID of the sender." },
+        "senderName": { "type": "string", "description": "Nickname of the sender." },
+        "senderMascot": {
+          "type": "string",
+          "enum": ["DUCK", "FROG", "SNAIL", "PIGEON", "FLAMINGO", "DINO", "POTATO", "CRAB"]
+        },
+        "senderAvatarCode": { "type": "string", "description": "Encoded cartoon avatar of the sender." },
+        "recipientId": { "type": "string", "description": "UID of the recipient." },
+        "squadId": { "type": "string", "description": "Shared squad ID authorizing the nudge." },
+        "message": { "type": "string", "description": "Funny nudge text (1-120 chars)." },
+        "nudgeType": {
+          "type": "string",
+          "enum": ["QUACK_ATTACK", "COUCH_ALERT", "SNAIL_PACE", "CROWN_THREAT", "HIGH_FIVE"]
+        },
+        "acknowledged": { "type": "boolean", "description": "Whether the recipient dismissed/read this nudge." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": [
+        "senderId",
+        "senderName",
+        "senderMascot",
+        "recipientId",
+        "squadId",
+        "message",
+        "nudgeType",
+        "acknowledged",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-only user profile and step tracking document."
+    },
+    "/users/{userId}/nudges/{nudgeId}": {
+      "schema": { "$ref": "#/entities/FriendNudge" },
+      "description": "Incoming playful nudges/heckles for a user from their squadmates."
+    },
+    "/squads/{squadId}": {
+      "schema": { "$ref": "#/entities/Squad" },
+      "description": "Friend squads for daily and weekly step competition."
+    },
+    "/squads/{squadId}/members/{memberId}": {
+      "schema": { "$ref": "#/entities/SquadMember" },
+      "description": "Squad member step entries readable by fellow squadmates."
+    },
+    "/squad_invites/{inviteCode}": {
+      "schema": { "$ref": "#/entities/SquadInvite" },
+      "description": "Single-document invite code lookup for joining a friend squad."
+    }
+  }
+}

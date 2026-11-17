@@ -1,11 +1,119 @@
-<div align="center">
+# 🦆 WaddleUp
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+**WaddleUp** is a humorous, social Android step-tracking app built with **Kotlin**, **Jetpack Compose**, **Material 3**, and **Firebase**. Track real daily steps, unlock goofy stride titles, crack open mystery power-up crates, design a ridiculous cartoon avatar, and compete with friends on daily and weekly squad leaderboards.
 
-  <h1>Built with AI Studio</h2>
+---
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## ✨ Features
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+- **Live Hardware Step Tracking & Manual Walks**
+  - Tracks steps automatically via Android's `SensorManager` (`TYPE_STEP_COUNTER` with `TYPE_STEP_DETECTOR` fallback and `ACTIVITY_RECOGNITION` permission handling).
+  - Includes a **Log a Walk** dialog with funny presets (e.g., *Fridge-to-Couch Roundtrip*, *Treadmill Strut*) and custom step entry.
+  - Translates steps into **Ridiculous Units**, awards goofy stride ranks (*Certified Couch Croissant* → *Supreme Step Goblin*), displays a 7-day progress chart, and tracks daily silly quests.
 
-</div>
+- **Power-Up Steps & Mystery Crates**
+  - Earn **Mystery Power-Up Crates** (1 free daily starter crate + 1 crate every 1,000 steps).
+  - Activate temporary multipliers and burst boosts with a live `MM:SS` countdown HUD:
+    - **Snail's Pace (`🐌`)**: `2x` steps for 5 minutes
+    - **Rocket Boost (`🚀`)**: `+250` instant steps & `3x` burst for 2 minutes
+    - **Disco Fever (`🪩`)**: `+150` instant steps & `2x` groove for 3 minutes
+    - **Snack Magnet (`🌮`)**: `+400` instant burst steps
+  - Active boosts are synced to Cloud Firestore and displayed live on squad leaderboards.
+
+- **Animated Milestone Celebrations**
+  - Prominent confetti-filled celebration overlay when crossing **Daily Step Goals**, **Weekly Targets**, or **Personal Bests** (`>= 500` steps).
+  - Features your custom cartoon avatar dancing alongside backup dancers (a disco duck and hype frog), queued milestone popups, a native **Brag** share sheet, and a **Dance Party!** replay chip on the Today screen.
+
+- **Cartoon Avatar Designer Studio**
+  - Customize your avatar in the **You** (Profile) tab with 8 body colors, 7 hairstyles, 6 expressive faces, 8 wacky accessories (including animated googly eyes and a spinning propeller cap), and a **Chaos** randomizer button.
+  - Avatars appear on the Today header, squad leaderboards, celebration stages, and incoming friend nudges.
+
+- **Friend Squads, Leaderboards & Nudges**
+  - Create squads with unique 6-character invite codes and share invites via Android's native share sheet (`Intent.ACTION_SEND`).
+  - Switch between **Daily** and **Weekly** squad standings and send playful heckles/cheers (*Quack Attack*, *Couch Alert*, etc.) to friends.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Language & UI**: Kotlin, Jetpack Compose, Material Design 3 (`Scaffold`, `NavigationBar` / adaptive `NavigationRail`), Compose Canvas animations
+- **Architecture**: MVVM with `StateFlow` / `SharedFlow` (`WaddleViewModel`, `StepSensorTracker`, `WaddleRepository`)
+- **Navigation**: Jetpack Navigation Compose (`androidx.navigation.compose`)
+- **Backend & Auth**:
+  - **Firebase Authentication** with Google Sign-In via Jetpack **Credential Manager** (`GetSignInWithGoogleOption`)
+  - **Cloud Firestore** with zero-trust security rules (`firestore.rules`)
+- **Testing**: JUnit 4, Robolectric, Coroutines Test, and Node.js Firestore Rules unit tests (`firestore.test.js`)
+
+---
+
+## 📁 Project Structure
+
+```text
+app/src/main/java/com/example/
+├── MainActivity.kt                  # Edge-to-edge activity entry point
+├── auth/
+│   └── GoogleAuthHelper.kt          # Credential Manager Google Sign-In & Sign-Out
+├── data/
+│   ├── FirestoreErrorHandler.kt     # Structured Firestore error logging
+│   ├── StepSensorTracker.kt         # SensorManager pedometer, crates & power-up logic
+│   └── WaddleRepository.kt          # Firestore CRUD, squad invites, leaderboard & nudges
+├── model/
+│   ├── AvatarParts.kt               # Avatar parts, PowerUpType, CelebrationMilestone
+│   ├── WaddleHumor.kt               # Stride ranks, weird units, quests & funny copy
+│   └── WaddleModels.kt              # UserProfile, Squad, SquadMember, FriendNudge
+└── ui/
+    ├── WaddleApp.kt                 # Auth gate, adaptive scaffold, NavHost & celebrations
+    ├── WaddleViewModel.kt           # State management, cloud sync, timers & milestones
+    ├── components/
+    │   ├── AvatarStudioCard.kt      # Interactive cartoon avatar customizer
+    │   ├── CartoonAvatar.kt         # Custom Canvas cartoon avatar renderer
+    │   ├── CelebrationOverlay.kt    # Confetti & dancing character milestone dialog
+    │   ├── PowerUpPanel.kt          # Active power-up HUD, crate opener & stash
+    │   └── WaddleComponents.kt      # Step ring, 7-day chart, nudge sheet & share helper
+    ├── screens/
+    │   ├── AuthScreen.kt            # Google Sign-In onboarding screen
+    │   ├── TodayScreen.kt           # Daily dashboard, power-ups, quests & log walk
+    │   ├── LeaderboardScreen.kt     # Daily/Weekly squad standings & live boost badges
+    │   ├── SquadsScreen.kt          # Squad creation/joining & incoming nudges inbox
+    │   └── ProfileScreen.kt         # Avatar studio, mascot, bio/excuse & daily goal
+    └── theme/                       # Material 3 color scheme & bundled typography
+```
+
+---
+
+## 🔐 Permissions
+
+Declared in `app/src/main/AndroidManifest.xml`:
+- `android.permission.INTERNET` — Cloud Firestore sync and Google Sign-In.
+- `android.permission.ACTIVITY_RECOGNITION` — Runtime permission requested on Android 10+ (API 29+) for hardware step counting.
+
+Hardware features (`stepcounter`, `stepdetector`) are marked `android:required="false"` so devices without a hardware pedometer can still log walks manually.
+
+---
+
+## 🗄️ Firestore Data Model
+
+- `users/{userId}` — User profile, daily/weekly step totals, personal best (`bestDailySteps`), `avatarCode`, active power-up state, and 14-day history map.
+- `users/{userId}/nudges/{nudgeId}` — Incoming heckles/cheers from squadmates (`senderAvatarCode`, `nudgeType`, `message`, `acknowledged`).
+- `squads/{squadId}` — Squad metadata (`name`, `motto`, `inviteCode`, `memberIds`).
+- `squads/{squadId}/members/{userId}` — Denormalized leaderboard member stats, avatar, and live power-up badge.
+- `squad_invites/{inviteCode}` — Lookup table mapping 6-character codes to squad IDs.
+
+---
+
+## 🚀 Building & Testing
+
+### Compile & Run Android Unit Tests
+```bash
+# Compile debug APK
+gradle :app:compileDebugKotlin
+
+# Run local JVM & Robolectric unit tests
+gradle :app:testDebugUnitTest
+```
+
+### Run Firestore Security Rules Tests
+With the Firebase Firestore Emulator running on port `8085`:
+```bash
+FIRESTORE_EMULATOR_HOST="127.0.0.1:8085" node --test firestore.test.js
+```

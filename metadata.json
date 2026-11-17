@@ -1,0 +1,6 @@
+{
+  "name": "WaddleUp",
+  "description": "A hilarious social step-tracking app where friends compete on daily and weekly leaderboards, earn goofy stride titles, and send playful nudges.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

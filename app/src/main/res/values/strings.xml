@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">WaddleUp</string>
+    <string name="tagline_auth">Track steps, earn goofy ranks, and roast your friends on daily &amp; weekly leaderboards.</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="nav_today">Today</string>
+    <string name="nav_compete">Compete</string>
+    <string name="nav_squads">Squads</string>
+    <string name="nav_profile">You</string>
+    <string name="permission_steps_title">Let WaddleUp count your steps</string>
+    <string name="permission_steps_desc">Grant Physical Activity access so your phone\'s pedometer tracks every stride automatically.</string>
+    <string name="permission_steps_cta">Enable Step Sensor</string>
+    <string name="log_walk_cta">Log a Walk</string>
+    <string name="share_squad_cta">Invite Friends</string>
+    <string name="sign_out">Sign Out</string>
+</resources>
