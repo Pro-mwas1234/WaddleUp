@@ -93,15 +93,10 @@ jobs:
               return
             fi
 
-            if ! git rev-parse -q --verify "refs/tags/v1.0.0" >/dev/null; then
-              echo "v1.0.0"
-              return
-            fi
-
             mapfile -t ALL_TAGS < <(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname)
             local LATEST_TAG="${ALL_TAGS[0]:-}"
             if [[ -z "$LATEST_TAG" ]]; then
-              echo "v1.0.0"
+              echo "v1.0.1"
             else
               local VERSION="${LATEST_TAG#v}"
               local MAJOR MINOR PATCH
