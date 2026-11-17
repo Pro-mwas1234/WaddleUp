@@ -30,16 +30,45 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Set up Android SDK & accept licenses
+        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [[ ! -d "$SDK_ROOT" ]]; then
+            echo "::error::Android SDK directory not found at $SDK_ROOT"
+            exit 1
+          fi
+
+          echo "ANDROID_HOME=${SDK_ROOT}" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=${SDK_ROOT}" >> "$GITHUB_ENV"
+
+          SDKMANAGER=""
+          if [[ -x "${SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" ]]; then
+            SDKMANAGER="${SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          else
+            SDKMANAGER="$(find "${SDK_ROOT}/cmdline-tools" -type f -name sdkmanager -print -quit 2>/dev/null || true)"
+          fi
+
+          if [[ -z "$SDKMANAGER" ]]; then
+            SDKMANAGER="$(command -v sdkmanager || true)"
+          fi
+
+          if [[ -z "$SDKMANAGER" ]]; then
+            echo "::error::sdkmanager not found under ${SDK_ROOT}"
+            exit 1
+          fi
+
+          # Accept all Android SDK licenses cleanly (guard yes against SIGPIPE under pipefail)
+          (yes || true) | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" >/dev/null
 
       - name: Set up Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
@@ -121,8 +150,8 @@ jobs:
           mkdir -p "$STAGE_DIR"
           TAG="${{ steps.meta.outputs.tag }}"
 
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          AAB_PATH=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" -print -quit)
+          AAB_PATH=$(find app/build/outputs/bundle/release -name "*.aab" -print -quit)
 
           if [[ -z "$APK_PATH" || -z "$AAB_PATH" ]]; then
             echo "::error::Failed to locate built release APK or AAB."
@@ -137,7 +166,7 @@ jobs:
           echo "dir=${STAGE_DIR}" >> "$GITHUB_OUTPUT"
 
       - name: Upload workflow artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: waddleup-${{ steps.meta.outputs.tag }}
           path: ${{ steps.artifacts.outputs.dir }}/*
