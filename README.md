@@ -125,7 +125,8 @@ FIRESTORE_EMULATOR_HOST="127.0.0.1:8085" node --test firestore.test.js
 The workflow in `.github/workflows/release.yml` runs unit tests, builds both a signed **Release APK** (`waddleup-<tag>.apk`) and **Android App Bundle** (`waddleup-<tag>.aab`), uploads them as workflow artifacts, and publishes a **GitHub Release**.
 
 ### Triggering a Release
-- **Tag push**: Push any `v*` tag:
+- **Auto-release on changes**: Pushing commits to `main` or `master` automatically runs tests, builds the APK & AAB, and publishes a GitHub Release (`v1.0.0` initially, then auto-incrementing patch versions `v1.0.1`, `v1.0.2`, ...).
+- **Tag push**: Push any `v*` tag for an explicit version:
   ```bash
   git tag v1.0.0
   git push origin v1.0.0

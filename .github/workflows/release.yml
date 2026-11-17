@@ -2,6 +2,9 @@ name: Release Android App
 
 on:
   push:
+    branches:
+      - main
+      - master
     tags:
       - 'v*'
   workflow_dispatch:
@@ -27,10 +30,14 @@ jobs:
   build-and-release:
     name: Test, Build & Publish Release
     runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: -Djava.net.preferIPv4Stack=true
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -79,14 +86,45 @@ jobs:
         id: meta
         shell: bash
         run: |
+          resolve_next_tag() {
+            mapfile -t HEAD_TAGS < <(git tag --points-at HEAD 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname)
+            if [[ -n "${HEAD_TAGS[0]:-}" ]]; then
+              echo "${HEAD_TAGS[0]}"
+              return
+            fi
+
+            if ! git rev-parse -q --verify "refs/tags/v1.0.0" >/dev/null; then
+              echo "v1.0.0"
+              return
+            fi
+
+            mapfile -t ALL_TAGS < <(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname)
+            local LATEST_TAG="${ALL_TAGS[0]:-}"
+            if [[ -z "$LATEST_TAG" ]]; then
+              echo "v1.0.0"
+            else
+              local VERSION="${LATEST_TAG#v}"
+              local MAJOR MINOR PATCH
+              IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+              echo "v${MAJOR}.${MINOR}.$((PATCH + 1))"
+            fi
+          }
+
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             TAG="${{ inputs.release_tag }}"
             if [[ -z "$TAG" ]]; then
-              TAG="dev-${GITHUB_RUN_NUMBER}"
+              if [[ "${{ inputs.publish_release }}" == "true" ]]; then
+                TAG="$(resolve_next_tag)"
+              else
+                TAG="dev-${GITHUB_RUN_NUMBER}"
+              fi
             fi
-          else
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF_NAME}"
+          else
+            TAG="$(resolve_next_tag)"
           fi
+          echo "Release tag: ${TAG}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Configure optional Firebase & .env secrets
@@ -103,7 +141,7 @@ jobs:
           fi
 
       - name: Run unit tests
-        run: gradle :app:testDebugUnitTest --no-daemon
+        run: gradle :app:testDebugUnitTest --no-daemon --stacktrace
 
       - name: Configure release signing keystore
         id: signing
@@ -140,7 +178,7 @@ jobs:
           fi
 
       - name: Build signed Release APK & AAB
-        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon --stacktrace
 
       - name: Stage versioned release artifacts
         id: artifacts
@@ -173,10 +211,11 @@ jobs:
           retention-days: 30
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.release_tag != '')
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: WaddleUp ${{ steps.meta.outputs.tag }}
           generate_release_notes: true
           draft: false
