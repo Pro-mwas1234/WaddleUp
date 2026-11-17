@@ -117,3 +117,28 @@ With the Firebase Firestore Emulator running on port `8085`:
 ```bash
 FIRESTORE_EMULATOR_HOST="127.0.0.1:8085" node --test firestore.test.js
 ```
+
+---
+
+## 📦 GitHub Actions Release Workflow
+
+The workflow in `.github/workflows/release.yml` runs unit tests, builds both a signed **Release APK** (`waddleup-<tag>.apk`) and **Android App Bundle** (`waddleup-<tag>.aab`), uploads them as workflow artifacts, and publishes a **GitHub Release**.
+
+### Triggering a Release
+- **Tag push**: Push any `v*` tag:
+  ```bash
+  git tag v1.0.0
+  git push origin v1.0.0
+  ```
+- **Manual dispatch**: Run **Release Android App** from the **Actions** tab in GitHub (optionally specifying a `release_tag` and toggling `publish_release`).
+
+### Repository Secrets (for Production Signing)
+Configure these in **Settings → Secrets and variables → Actions** (matching the `release` signing config in `app/build.gradle.kts` with `keyAlias = "upload"`):
+- `RELEASE_KEYSTORE_BASE64` — Base64-encoded upload keystore (`.jks`)
+- `STORE_PASSWORD` — Keystore password
+- `KEY_PASSWORD` — Upload key password
+- `GOOGLE_SERVICES_JSON_BASE64` *(optional)* — Base64-encoded `app/google-services.json` if excluded from Git
+- `APP_ENV_FILE` *(optional)* — Contents for `.env` if additional Secrets Gradle Plugin keys are needed
+
+> If the keystore secrets are omitted, the workflow falls back to an ephemeral self-signed `upload` keystore so test builds still succeed.
+

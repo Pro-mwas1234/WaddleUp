@@ -1,0 +1,163 @@
+name: Release Android App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag name (e.g. v1.0.0)'
+        required: false
+        default: ''
+      publish_release:
+        description: 'Create a GitHub Release with APK & AAB attached'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    name: Test, Build & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Determine release version tag
+        id: meta
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.release_tag }}"
+            if [[ -z "$TAG" ]]; then
+              TAG="dev-${GITHUB_RUN_NUMBER}"
+            fi
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure optional Firebase & .env secrets
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
+        shell: bash
+        run: |
+          if [[ -n "$GOOGLE_SERVICES_JSON_BASE64" ]]; then
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          fi
+          if [[ -n "$APP_ENV_FILE" ]]; then
+            printf '%s\n' "$APP_ENV_FILE" > .env
+          fi
+
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest --no-daemon
+
+      - name: Configure release signing keystore
+        id: signing
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          KEYSTORE_FILE="${RUNNER_TEMP}/release-upload-key.jks"
+          if [[ -n "$RELEASE_KEYSTORE_BASE64" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" ]]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+            echo "KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=${STORE_PASSWORD}" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=${KEY_PASSWORD}" >> "$GITHUB_ENV"
+            echo "ephemeral=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::RELEASE_KEYSTORE_BASE64, STORE_PASSWORD, or KEY_PASSWORD secret not set. Generating an ephemeral upload keystore for this build."
+            TEMP_PASS="waddleup-ephemeral-keystore"
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_FILE" \
+              -storetype PKCS12 \
+              -alias upload \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 3650 \
+              -storepass "$TEMP_PASS" \
+              -keypass "$TEMP_PASS" \
+              -dname "CN=WaddleUp CI, OU=Mobile, O=WaddleUp, L=Cloud, S=CA, C=US"
+            echo "KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=${TEMP_PASS}" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=${TEMP_PASS}" >> "$GITHUB_ENV"
+            echo "ephemeral=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build signed Release APK & AAB
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+
+      - name: Stage versioned release artifacts
+        id: artifacts
+        shell: bash
+        run: |
+          STAGE_DIR="${RUNNER_TEMP}/release-assets"
+          mkdir -p "$STAGE_DIR"
+          TAG="${{ steps.meta.outputs.tag }}"
+
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          AAB_PATH=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
+
+          if [[ -z "$APK_PATH" || -z "$AAB_PATH" ]]; then
+            echo "::error::Failed to locate built release APK or AAB."
+            exit 1
+          fi
+
+          cp "$APK_PATH" "${STAGE_DIR}/waddleup-${TAG}.apk"
+          cp "$AAB_PATH" "${STAGE_DIR}/waddleup-${TAG}.aab"
+
+          echo "apk=${STAGE_DIR}/waddleup-${TAG}.apk" >> "$GITHUB_OUTPUT"
+          echo "aab=${STAGE_DIR}/waddleup-${TAG}.aab" >> "$GITHUB_OUTPUT"
+          echo "dir=${STAGE_DIR}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: waddleup-${{ steps.meta.outputs.tag }}
+          path: ${{ steps.artifacts.outputs.dir }}/*
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.release_tag != '')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: WaddleUp ${{ steps.meta.outputs.tag }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(steps.meta.outputs.tag, '-') }}
+          body: |
+            ## 🦆 WaddleUp ${{ steps.meta.outputs.tag }}
+            - **`waddleup-${{ steps.meta.outputs.tag }}.apk`** — Direct Android installer
+            - **`waddleup-${{ steps.meta.outputs.tag }}.aab`** — Android App Bundle for Google Play
+
+            ${{ steps.signing.outputs.ephemeral == 'true' && '> ⚠️ **Note:** Built with an ephemeral CI signing key because `RELEASE_KEYSTORE_BASE64`, `STORE_PASSWORD`, and `KEY_PASSWORD` secrets were not configured.' || '✅ Signed with configured release upload keystore.' }}
+          files: |
+            ${{ steps.artifacts.outputs.apk }}
+            ${{ steps.artifacts.outputs.aab }}
