@@ -38,7 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -117,10 +119,11 @@ private val waddleDestinations = listOf(
 
 @Composable
 fun AppNavigation(auth: FirebaseAuth = Firebase.auth) {
-    val currentUser by auth.authStateFlow().collectAsStateWithLifecycle(initialValue = auth.currentUser)
-    val user = currentUser
+    val authFlowUser by auth.authStateFlow().collectAsStateWithLifecycle(initialValue = auth.currentUser)
+    var refreshNonce by remember { mutableIntStateOf(0) }
+    val user = remember(authFlowUser, refreshNonce) { authFlowUser ?: auth.currentUser }
     if (user == null) {
-        AuthScreen(onAuthSuccess = {})
+        AuthScreen(onAuthSuccess = { refreshNonce++ })
     } else {
         key(user.uid) {
             val defaultName = user.displayName?.trim()?.takeIf { it.isNotEmpty() } ?: "Waddler"

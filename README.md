@@ -141,5 +141,5 @@ Configure these in **Settings → Secrets and variables → Actions** (matching 
 - `GOOGLE_SERVICES_JSON_BASE64` *(optional)* — Base64-encoded `app/google-services.json` if excluded from Git
 - `APP_ENV_FILE` *(optional)* — Contents for `.env` if additional Secrets Gradle Plugin keys are needed
 
-> If the keystore secrets are omitted, the workflow falls back to an ephemeral self-signed `upload` keystore so test builds still succeed.
+> If `RELEASE_KEYSTORE_BASE64` is omitted, CI automatically signs with the repository's persistent `debug.keystore.base64` key so APK updates install cleanly in-place without uninstalling and match the SHA-1 already registered in Firebase for Google Sign-In. For Google Play Store releases using a custom keystore, also register that keystore's (and Play App Signing's) SHA-1 in Firebase Console.
 

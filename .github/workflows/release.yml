@@ -154,9 +154,30 @@ jobs:
             echo "KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
             echo "STORE_PASSWORD=${STORE_PASSWORD}" >> "$GITHUB_ENV"
             echo "KEY_PASSWORD=${KEY_PASSWORD}" >> "$GITHUB_ENV"
-            echo "ephemeral=false" >> "$GITHUB_OUTPUT"
+            echo "mode=custom" >> "$GITHUB_OUTPUT"
+          elif [[ -f debug.keystore.base64 || -f debug.keystore ]]; then
+            SRC_KEYSTORE="${RUNNER_TEMP}/project-debug.keystore"
+            if [[ -f debug.keystore.base64 ]]; then
+              base64 --decode debug.keystore.base64 > "$SRC_KEYSTORE"
+            else
+              cp debug.keystore "$SRC_KEYSTORE"
+            fi
+            keytool -importkeystore \
+              -srckeystore "$SRC_KEYSTORE" \
+              -srcstorepass android \
+              -srcalias androiddebugkey \
+              -srckeypass android \
+              -destkeystore "$KEYSTORE_FILE" \
+              -deststorepass android \
+              -destalias upload \
+              -destkeypass android \
+              -noprompt
+            echo "KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=android" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=android" >> "$GITHUB_ENV"
+            echo "mode=persistent_project_key" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::RELEASE_KEYSTORE_BASE64, STORE_PASSWORD, or KEY_PASSWORD secret not set. Generating an ephemeral upload keystore for this build."
+            echo "::warning::No RELEASE_KEYSTORE_BASE64 secret or debug.keystore.base64 found. Generating an ephemeral upload keystore for this build."
             TEMP_PASS="waddleup-ephemeral-keystore"
             keytool -genkeypair -v \
               -keystore "$KEYSTORE_FILE" \
@@ -171,7 +192,7 @@ jobs:
             echo "KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
             echo "STORE_PASSWORD=${TEMP_PASS}" >> "$GITHUB_ENV"
             echo "KEY_PASSWORD=${TEMP_PASS}" >> "$GITHUB_ENV"
-            echo "ephemeral=true" >> "$GITHUB_OUTPUT"
+            echo "mode=ephemeral" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build signed Release APK & AAB
@@ -222,7 +243,7 @@ jobs:
             - **`waddleup-${{ steps.meta.outputs.tag }}.apk`** — Direct Android installer
             - **`waddleup-${{ steps.meta.outputs.tag }}.aab`** — Android App Bundle for Google Play
 
-            ${{ steps.signing.outputs.ephemeral == 'true' && '> ⚠️ **Note:** Built with an ephemeral CI signing key because `RELEASE_KEYSTORE_BASE64`, `STORE_PASSWORD`, and `KEY_PASSWORD` secrets were not configured.' || '✅ Signed with configured release upload keystore.' }}
+            ${{ steps.signing.outputs.mode == 'custom' && '✅ Signed with configured `RELEASE_KEYSTORE_BASE64` upload keystore.' || (steps.signing.outputs.mode == 'persistent_project_key' && '✅ Signed with persistent project signing key (supports in-place updates and registered Firebase Google Sign-In).' || '> ⚠️ **Note:** Built with an ephemeral CI signing key because neither `RELEASE_KEYSTORE_BASE64` nor `debug.keystore.base64` was found.') }}
           files: |
             ${{ steps.artifacts.outputs.apk }}
             ${{ steps.artifacts.outputs.aab }}
