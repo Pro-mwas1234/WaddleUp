@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.AppUpdateChecker
 import com.example.data.AppUpdateState
+import com.example.data.GitHubReleaseInfo
 import com.example.data.StepSensorTracker
 import com.example.data.StepTrackerState
 import com.example.data.WaddleRepository
@@ -22,6 +23,7 @@ import com.example.model.UserProfile
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +39,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 
 enum class LeaderboardPeriod { DAILY, WEEKLY }
 
@@ -74,6 +77,7 @@ class WaddleViewModel(
     private val _showUpdateDialog = MutableStateFlow(false)
     val showUpdateDialog: StateFlow<Boolean> = _showUpdateDialog.asStateFlow()
 
+    private var downloadJob: Job? = null
     private val celebrationQueue = ArrayDeque<CelebrationEvent>()
 
     private var lastSyncedSteps = -1L
@@ -529,13 +533,80 @@ class WaddleViewModel(
     }
 
     fun openUpdateDialog() {
-        if (_updateState.value is AppUpdateState.UpdateAvailable) {
-            _showUpdateDialog.value = true
+        when (_updateState.value) {
+            is AppUpdateState.UpdateAvailable,
+            is AppUpdateState.Downloading,
+            is AppUpdateState.ReadyToInstall -> _showUpdateDialog.value = true
+            else -> Unit
         }
     }
 
     fun dismissUpdateDialog() {
         _showUpdateDialog.value = false
+    }
+
+    fun downloadUpdate(
+        release: GitHubReleaseInfo,
+        updatesDir: File,
+        canInstallPackages: () -> Boolean,
+        onReadyToInstall: (File) -> Unit
+    ) {
+        if (downloadJob?.isActive == true) return
+        _showUpdateDialog.value = true
+        downloadJob = viewModelScope.launch {
+            _updateState.value = AppUpdateState.Downloading(
+                release = release,
+                downloadedBytes = 0L,
+                totalBytes = release.apkSizeBytes
+            )
+            try {
+                val apkFile = AppUpdateChecker.downloadApk(
+                    release = release,
+                    updatesDir = updatesDir,
+                    onProgress = { downloaded, total ->
+                        _updateState.value = AppUpdateState.Downloading(
+                            release = release,
+                            downloadedBytes = downloaded,
+                            totalBytes = total
+                        )
+                    }
+                )
+                val canInstall = canInstallPackages()
+                _updateState.value = AppUpdateState.ReadyToInstall(
+                    release = release,
+                    apkFilePath = apkFile.absolutePath,
+                    needsInstallPermission = !canInstall
+                )
+                if (canInstall) {
+                    onReadyToInstall(apkFile)
+                }
+            } catch (cancelled: CancellationException) {
+                _updateState.value = AppUpdateState.UpdateAvailable(release)
+                throw cancelled
+            } catch (err: Exception) {
+                Log.w(TAG, "In-app update download failed", err)
+                _updateState.value = AppUpdateState.Error(
+                    message = err.message ?: "Download failed. Please try again.",
+                    failedRelease = release
+                )
+            }
+        }
+    }
+
+    fun cancelUpdateDownload() {
+        downloadJob?.cancel()
+        downloadJob = null
+        val current = _updateState.value
+        if (current is AppUpdateState.Downloading) {
+            _updateState.value = AppUpdateState.UpdateAvailable(current.release)
+        }
+    }
+
+    fun refreshInstallPermissionState(canInstall: Boolean) {
+        val current = _updateState.value
+        if (current is AppUpdateState.ReadyToInstall && current.needsInstallPermission != !canInstall) {
+            _updateState.value = current.copy(needsInstallPermission = !canInstall)
+        }
     }
 
     private fun unwrapFirestoreError(error: Throwable): FirebaseFirestoreException? =

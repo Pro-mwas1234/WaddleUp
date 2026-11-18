@@ -78,7 +78,7 @@
   - Switch between **Daily** and **Weekly** squad standings and send playful heckles/cheers (*Quack Attack*, *Couch Alert*, etc.) to friends.
 
 - **In-App GitHub Updater**
-  - Automatically checks GitHub Releases on launch (plus a manual **Check Updates** card in the **You** tab) and lets players download the newest signed APK directly to update in-place.
+  - Automatically checks GitHub Releases on launch (plus a manual **Check Updates** card in the **You** tab), downloads the signed `.apk` inside the app with live progress and SHA-256 verification, and launches Android's system package installer directly.
 
 ---
 

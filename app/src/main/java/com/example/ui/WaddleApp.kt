@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -48,7 +49,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -79,6 +83,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import java.io.File
 
 object WaddleRoutes {
     const val TODAY = "today"
@@ -167,6 +172,8 @@ fun WaddleMainShell(
     )
 
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val updatesDir = remember(context) { File(context.cacheDir, "updates") }
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: WaddleRoutes.TODAY
@@ -186,6 +193,21 @@ fun WaddleMainShell(
 
     val unreadNudgesCount = (nudgesState as? UiState.Success)?.data?.count { !it.acknowledged } ?: 0
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // If user returns from granting "Install unknown apps", immediately auto-launch the installer
+    DisposableEffect(lifecycleOwner, updateState) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val ready = updateState as? AppUpdateState.ReadyToInstall
+                if (ready != null && ready.needsInstallPermission && AppUpdateChecker.canInstallPackages(context)) {
+                    viewModel.refreshInstallPermissionState(canInstall = true)
+                    AppUpdateChecker.launchApkInstaller(context, File(ready.apkFilePath))
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.checkForUpdates(
@@ -225,7 +247,10 @@ fun WaddleMainShell(
                         }
                     },
                     actions = {
-                        if (updateState is AppUpdateState.UpdateAvailable) {
+                        if (updateState is AppUpdateState.UpdateAvailable ||
+                            updateState is AppUpdateState.Downloading ||
+                            updateState is AppUpdateState.ReadyToInstall
+                        ) {
                             IconButton(
                                 onClick = viewModel::openUpdateDialog,
                                 modifier = Modifier.testTag("topbar_update_available")
@@ -395,20 +420,33 @@ fun WaddleMainShell(
             onDismiss = viewModel::dismissCelebration
         )
 
-        val availableUpdate = updateState as? AppUpdateState.UpdateAvailable
-        if (showUpdateDialog && availableUpdate != null) {
+        if (showUpdateDialog) {
             AppUpdateDialog(
-                release = availableUpdate.release,
-                onDownloadUpdate = {
+                updateState = updateState,
+                onStartDownload = { release ->
                     AppUpdateChecker.clearSkippedTag(context)
-                    viewModel.dismissUpdateDialog()
-                    AppUpdateChecker.launchExternalUrl(context, availableUpdate.release.apkDownloadUrl)
+                    viewModel.downloadUpdate(
+                        release = release,
+                        updatesDir = updatesDir,
+                        canInstallPackages = { AppUpdateChecker.canInstallPackages(context) },
+                        onReadyToInstall = { apkFile ->
+                            AppUpdateChecker.launchApkInstaller(context, apkFile)
+                        }
+                    )
                 },
-                onOpenWebsite = {
-                    AppUpdateChecker.launchExternalUrl(context, AppUpdateChecker.WEBSITE_URL)
+                onCancelDownload = viewModel::cancelUpdateDownload,
+                onInstallDownloaded = { ready ->
+                    if (AppUpdateChecker.canInstallPackages(context)) {
+                        viewModel.refreshInstallPermissionState(canInstall = true)
+                        AppUpdateChecker.launchApkInstaller(context, File(ready.apkFilePath))
+                    } else {
+                        AppUpdateChecker.openUnknownSourcesSettings(context)
+                    }
                 },
-                onDismiss = {
-                    AppUpdateChecker.markTagSkipped(context, availableUpdate.release.tagName)
+                onDismiss = { release ->
+                    if (release != null) {
+                        AppUpdateChecker.markTagSkipped(context, release.tagName)
+                    }
                     viewModel.dismissUpdateDialog()
                 }
             )

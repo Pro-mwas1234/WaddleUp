@@ -102,6 +102,44 @@ class AppUpdateCheckerTest {
     }
 
     @Test
+    fun `parseReleaseObject extracts sha256 digest when present`() {
+        val json = org.json.JSONObject(
+            """
+            {
+              "tag_name": "v1.0.8",
+              "assets": [
+                {
+                  "name": "waddleup-v1.0.8.apk",
+                  "size": 14000000,
+                  "digest": "sha256:abcdef0123456789",
+                  "browser_download_url": "https://example.com/waddleup-v1.0.8.apk"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val parsed = AppUpdateChecker.parseReleaseObject(json)
+        assertNotNull(parsed)
+        assertEquals("abcdef0123456789", parsed!!.expectedSha256)
+    }
+
+    @Test
+    fun `fileProvider resolves uri for cached update apk`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val updatesDir = java.io.File(context.cacheDir, "updates").apply { mkdirs() }
+        val dummyApk = java.io.File(updatesDir, "waddleup-test.apk").apply {
+            writeText("dummy-apk-bytes")
+        }
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            dummyApk
+        )
+        assertTrue(uri.toString().contains("updates/waddleup-test.apk"))
+        dummyApk.delete()
+    }
+
+    @Test
     fun `skipped tag preferences persist and clear cleanly`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         AppUpdateChecker.clearSkippedTag(context)

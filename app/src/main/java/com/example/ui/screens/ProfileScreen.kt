@@ -313,10 +313,7 @@ fun ProfileScreen(
                 AppUpdateCard(
                     updateState = updateState,
                     onCheckUpdates = onCheckUpdates,
-                    onInstallUpdate = onInstallUpdate,
-                    onOpenWebsite = {
-                        AppUpdateChecker.launchExternalUrl(context, AppUpdateChecker.WEBSITE_URL)
-                    }
+                    onInstallUpdate = onInstallUpdate
                 )
             }
 
@@ -383,8 +380,7 @@ private fun MiniStatCard(
 private fun AppUpdateCard(
     updateState: AppUpdateState,
     onCheckUpdates: () -> Unit,
-    onInstallUpdate: () -> Unit,
-    onOpenWebsite: () -> Unit
+    onInstallUpdate: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(24.dp),
@@ -432,13 +428,19 @@ private fun AppUpdateCard(
                 is AppUpdateState.Checking -> "Checking GitHub Releases…"
                 is AppUpdateState.UpToDate -> "You're on the latest version (v${updateState.currentVersion})."
                 is AppUpdateState.UpdateAvailable ->
-                    "Version ${updateState.release.tagName} (${AppUpdateChecker.formatApkSize(updateState.release.apkSizeBytes)}) is ready to download."
-                is AppUpdateState.Error -> "Update check unavailable: ${updateState.message}"
+                    "Version ${updateState.release.tagName} (${AppUpdateChecker.formatApkSize(updateState.release.apkSizeBytes)}) is ready to update in-app."
+                is AppUpdateState.Downloading ->
+                    "Downloading ${updateState.release.tagName} (${AppUpdateChecker.formatApkSize(updateState.downloadedBytes)})…"
+                is AppUpdateState.ReadyToInstall ->
+                    "${updateState.release.tagName} downloaded and ready to install."
+                is AppUpdateState.Error -> "Update check failed: ${updateState.message}"
             }
             Text(
                 text = statusText,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (updateState is AppUpdateState.UpdateAvailable) {
+                color = if (updateState is AppUpdateState.UpdateAvailable ||
+                    updateState is AppUpdateState.ReadyToInstall
+                ) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -449,24 +451,64 @@ private fun AppUpdateCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (updateState is AppUpdateState.UpdateAvailable) {
-                    Button(
-                        onClick = onInstallUpdate,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .testTag("profile_install_update_button")
-                    ) {
-                        Icon(Icons.Filled.Download, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Update ${updateState.release.tagName}")
+                when (updateState) {
+                    is AppUpdateState.UpdateAvailable -> {
+                        Button(
+                            onClick = onInstallUpdate,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("profile_install_update_button")
+                        ) {
+                            Icon(Icons.Filled.Download, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Update ${updateState.release.tagName}")
+                        }
                     }
+
+                    is AppUpdateState.Downloading -> {
+                        Button(
+                            onClick = onInstallUpdate,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("profile_view_download_button")
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Downloading…")
+                        }
+                    }
+
+                    is AppUpdateState.ReadyToInstall -> {
+                        Button(
+                            onClick = onInstallUpdate,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("profile_install_ready_button")
+                        ) {
+                            Icon(Icons.Filled.Download, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Install ${updateState.release.tagName}")
+                        }
+                    }
+
+                    else -> Unit
                 }
 
+                val isBusyCheckingOrDownloading =
+                    updateState is AppUpdateState.Checking || updateState is AppUpdateState.Downloading
                 OutlinedButton(
                     onClick = onCheckUpdates,
-                    enabled = updateState !is AppUpdateState.Checking,
+                    enabled = !isBusyCheckingOrDownloading,
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .weight(1f)
@@ -486,13 +528,6 @@ private fun AppUpdateCard(
                         Text("Check Updates")
                     }
                 }
-            }
-
-            TextButton(
-                onClick = onOpenWebsite,
-                modifier = Modifier.testTag("profile_download_site_button")
-            ) {
-                Text(stringResource(R.string.update_open_page_cta))
             }
         }
     }
