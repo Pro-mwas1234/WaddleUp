@@ -1,6 +1,51 @@
+<div align="center">
+
+<img src="docs/assets/waddleup-icon.png" alt="WaddleUp App Icon" width="96" />
+
 # 🦆 WaddleUp
 
-**WaddleUp** is a humorous, social Android step-tracking app built with **Kotlin**, **Jetpack Compose**, **Material 3**, and **Firebase**. Track real daily steps, unlock goofy stride titles, crack open mystery power-up crates, design a ridiculous cartoon avatar, and compete with friends on daily and weekly squad leaderboards.
+**A humorous, social Android step-tracking game built with Kotlin, Jetpack Compose, Material 3, and Firebase.**
+
+<p>
+  <a href="https://github.com/Pro-mwas1234/WaddleUp/releases/latest">
+    <img src="https://img.shields.io/github/v/release/Pro-mwas1234/WaddleUp?label=App%20Version&color=FF5A1F&style=for-the-badge" alt="App Version" />
+  </a>
+  <a href="https://github.com/Pro-mwas1234/WaddleUp/releases">
+    <img src="https://img.shields.io/github/downloads/Pro-mwas1234/WaddleUp/total?label=Downloads&color=B8F22E&style=for-the-badge" alt="Total Downloads" />
+  </a>
+  <a href="https://github.com/Pro-mwas1234/WaddleUp/actions/workflows/release.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/Pro-mwas1234/WaddleUp/release.yml?branch=main&label=Build&style=for-the-badge" alt="Release Build Status" />
+  </a>
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/App_Type-Android_Social_Fitness-7C3AED?style=for-the-badge&logo=android&logoColor=white" alt="App Type: Android Social Fitness" />
+  <img src="https://img.shields.io/badge/Android-7.0%2B_(API_24%2B)-1E5631?style=for-the-badge" alt="Android 7.0+" />
+  <a href="https://github.com/Pro-mwas1234">
+    <img src="https://img.shields.io/badge/Developer-Pro--mwas1234-1D1633?style=for-the-badge&logo=github&logoColor=white" alt="Developer: Pro-mwas1234" />
+  </a>
+  <a href="https://github.com/Pro-mwas1234/WaddleUp/graphs/contributors">
+    <img src="https://img.shields.io/github/contributors/Pro-mwas1234/WaddleUp?label=Developers&color=FF5A1F&style=for-the-badge" alt="Developers" />
+  </a>
+</p>
+
+<p>
+  <a href="https://pro-mwas1234.github.io/WaddleUp/"><strong>🌐 Download Website</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://github.com/Pro-mwas1234/WaddleUp/releases/latest/download/waddleup-latest.apk"><strong>📦 Direct Latest APK</strong></a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://github.com/Pro-mwas1234/WaddleUp/releases"><strong>🏷️ All Releases</strong></a>
+</p>
+
+</div>
+
+---
+
+## 📸 Screenshots
+
+| Today & Power-Up Crates | Friend Squad Leaderboards | Cartoon Avatar Studio |
+| :---: | :---: | :---: |
+| <img src="docs/assets/screen-today.jpg" alt="Today step counter and power-up crates screen" width="230" /> | <img src="docs/assets/screen-ranks.jpg" alt="Squad standings leaderboard screen" width="230" /> | <img src="docs/assets/screen-avatar.jpg" alt="Cartoon avatar studio screen" width="230" /> |
 
 ---
 
@@ -31,6 +76,9 @@
 - **Friend Squads, Leaderboards & Nudges**
   - Create squads with unique 6-character invite codes and share invites via Android's native share sheet (`Intent.ACTION_SEND`).
   - Switch between **Daily** and **Weekly** squad standings and send playful heckles/cheers (*Quack Attack*, *Couch Alert*, etc.) to friends.
+
+- **In-App GitHub Updater**
+  - Automatically checks GitHub Releases on launch (plus a manual **Check Updates** card in the **You** tab) and lets players download the newest signed APK directly to update in-place.
 
 ---
 
