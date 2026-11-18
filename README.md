@@ -54,6 +54,7 @@ app/src/main/java/com/example/
 ├── auth/
 │   └── GoogleAuthHelper.kt          # Credential Manager Google Sign-In & Sign-Out
 ├── data/
+│   ├── AppUpdateChecker.kt          # Checks GitHub Releases & opens direct APK updates
 │   ├── FirestoreErrorHandler.kt     # Structured Firestore error logging
 │   ├── StepSensorTracker.kt         # SensorManager pedometer, crates & power-up logic
 │   └── WaddleRepository.kt          # Firestore CRUD, squad invites, leaderboard & nudges
@@ -62,9 +63,10 @@ app/src/main/java/com/example/
 │   ├── WaddleHumor.kt               # Stride ranks, weird units, quests & funny copy
 │   └── WaddleModels.kt              # UserProfile, Squad, SquadMember, FriendNudge
 └── ui/
-    ├── WaddleApp.kt                 # Auth gate, adaptive scaffold, NavHost & celebrations
+    ├── WaddleApp.kt                 # Auth gate, adaptive scaffold, NavHost & updater
     ├── WaddleViewModel.kt           # State management, cloud sync, timers & milestones
     ├── components/
+    │   ├── AppUpdateDialog.kt       # In-app GitHub update prompt & release notes dialog
     │   ├── AvatarStudioCard.kt      # Interactive cartoon avatar customizer
     │   ├── CartoonAvatar.kt         # Custom Canvas cartoon avatar renderer
     │   ├── CelebrationOverlay.kt    # Confetti & dancing character milestone dialog
@@ -75,7 +77,7 @@ app/src/main/java/com/example/
     │   ├── TodayScreen.kt           # Daily dashboard, power-ups, quests & log walk
     │   ├── LeaderboardScreen.kt     # Daily/Weekly squad standings & live boost badges
     │   ├── SquadsScreen.kt          # Squad creation/joining & incoming nudges inbox
-    │   └── ProfileScreen.kt         # Avatar studio, mascot, bio/excuse & daily goal
+    │   └── ProfileScreen.kt         # Avatar studio, updates card, bio/excuse & daily goal
     └── theme/                       # Material 3 color scheme & bundled typography
 ```
 

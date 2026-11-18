@@ -23,10 +23,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -54,8 +58,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import com.example.BuildConfig
 import com.example.R
 import com.example.auth.signOut
+import com.example.data.AppUpdateChecker
+import com.example.data.AppUpdateState
 import com.example.data.StepTrackerState
 import com.example.model.AvatarConfig
 import com.example.model.Mascot
@@ -75,6 +82,9 @@ fun ProfileScreen(
     stepState: StepTrackerState,
     squadsState: UiState<List<Squad>>,
     isBusy: Boolean,
+    updateState: AppUpdateState,
+    onCheckUpdates: () -> Unit,
+    onInstallUpdate: () -> Unit,
     onSaveProfile: (String, Mascot, AvatarConfig, String, Long) -> Unit
 ) {
     val context = LocalContext.current
@@ -300,6 +310,17 @@ fun ProfileScreen(
             }
 
             item {
+                AppUpdateCard(
+                    updateState = updateState,
+                    onCheckUpdates = onCheckUpdates,
+                    onInstallUpdate = onInstallUpdate,
+                    onOpenWebsite = {
+                        AppUpdateChecker.launchExternalUrl(context, AppUpdateChecker.WEBSITE_URL)
+                    }
+                )
+            }
+
+            item {
                 OutlinedButton(
                     onClick = {
                         signOut(credentialManager = credentialManager, scope = scope)
@@ -354,6 +375,125 @@ private fun MiniStatCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun AppUpdateCard(
+    updateState: AppUpdateState,
+    onCheckUpdates: () -> Unit,
+    onInstallUpdate: () -> Unit,
+    onOpenWebsite: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.SystemUpdate,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "App Updates",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        text = "v${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            val statusText = when (updateState) {
+                is AppUpdateState.Idle -> "Automatically checks GitHub Releases on launch."
+                is AppUpdateState.Checking -> "Checking GitHub Releases…"
+                is AppUpdateState.UpToDate -> "You're on the latest version (v${updateState.currentVersion})."
+                is AppUpdateState.UpdateAvailable ->
+                    "Version ${updateState.release.tagName} (${AppUpdateChecker.formatApkSize(updateState.release.apkSizeBytes)}) is ready to download."
+                is AppUpdateState.Error -> "Update check unavailable: ${updateState.message}"
+            }
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (updateState is AppUpdateState.UpdateAvailable) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (updateState is AppUpdateState.UpdateAvailable) {
+                    Button(
+                        onClick = onInstallUpdate,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .testTag("profile_install_update_button")
+                    ) {
+                        Icon(Icons.Filled.Download, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Update ${updateState.release.tagName}")
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onCheckUpdates,
+                    enabled = updateState !is AppUpdateState.Checking,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("check_updates_button")
+                ) {
+                    if (updateState is AppUpdateState.Checking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.checking_updates_cta))
+                    } else {
+                        Icon(Icons.Filled.Refresh, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Check Updates")
+                    }
+                }
+            }
+
+            TextButton(
+                onClick = onOpenWebsite,
+                modifier = Modifier.testTag("profile_download_site_button")
+            ) {
+                Text(stringResource(R.string.update_open_page_cta))
+            }
         }
     }
 }

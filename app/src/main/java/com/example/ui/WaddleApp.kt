@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Person
@@ -59,11 +60,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.R
 import com.example.auth.authStateFlow
+import com.example.data.AppUpdateChecker
+import com.example.data.AppUpdateState
 import com.example.data.StepSensorTracker
 import com.example.data.WaddleRepository
 import com.example.model.AvatarConfig
 import com.example.model.Mascot
 import com.example.model.UiState
+import com.example.ui.components.AppUpdateDialog
 import com.example.ui.components.CelebrationOverlay
 import com.example.ui.components.launchSquadShareSheet
 import com.example.ui.screens.AuthScreen
@@ -177,11 +181,17 @@ fun WaddleMainShell(
     val isBusy by viewModel.isBusy.collectAsStateWithLifecycle()
     val powerUpRemainingSeconds by viewModel.powerUpRemainingSeconds.collectAsStateWithLifecycle()
     val activeCelebration by viewModel.activeCelebration.collectAsStateWithLifecycle()
+    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
+    val showUpdateDialog by viewModel.showUpdateDialog.collectAsStateWithLifecycle()
 
     val unreadNudgesCount = (nudgesState as? UiState.Success)?.data?.count { !it.acknowledged } ?: 0
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
+        viewModel.checkForUpdates(
+            manual = false,
+            isSkippedTag = { tag -> AppUpdateChecker.isTagSkipped(context, tag) }
+        )
         viewModel.events.collect { message ->
             snackbarHostState.showSnackbar(message)
         }
@@ -215,6 +225,20 @@ fun WaddleMainShell(
                         }
                     },
                     actions = {
+                        if (updateState is AppUpdateState.UpdateAvailable) {
+                            IconButton(
+                                onClick = viewModel::openUpdateDialog,
+                                modifier = Modifier.testTag("topbar_update_available")
+                            ) {
+                                BadgedBox(badge = { Badge() }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.SystemUpdate,
+                                        contentDescription = "App update available",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
                         val squadToShare = activeSquad
                         if (squadToShare != null) {
                             IconButton(
@@ -347,6 +371,12 @@ fun WaddleMainShell(
                                 stepState = stepState,
                                 squadsState = squadsState,
                                 isBusy = isBusy,
+                                updateState = updateState,
+                                onCheckUpdates = {
+                                    AppUpdateChecker.clearSkippedTag(context)
+                                    viewModel.checkForUpdates(manual = true)
+                                },
+                                onInstallUpdate = viewModel::openUpdateDialog,
                                 onSaveProfile = viewModel::updateProfile
                             )
                         }
@@ -364,6 +394,25 @@ fun WaddleMainShell(
             displayName = currentProfile?.displayName ?: defaultDisplayName,
             onDismiss = viewModel::dismissCelebration
         )
+
+        val availableUpdate = updateState as? AppUpdateState.UpdateAvailable
+        if (showUpdateDialog && availableUpdate != null) {
+            AppUpdateDialog(
+                release = availableUpdate.release,
+                onDownloadUpdate = {
+                    AppUpdateChecker.clearSkippedTag(context)
+                    viewModel.dismissUpdateDialog()
+                    AppUpdateChecker.launchExternalUrl(context, availableUpdate.release.apkDownloadUrl)
+                },
+                onOpenWebsite = {
+                    AppUpdateChecker.launchExternalUrl(context, AppUpdateChecker.WEBSITE_URL)
+                },
+                onDismiss = {
+                    AppUpdateChecker.markTagSkipped(context, availableUpdate.release.tagName)
+                    viewModel.dismissUpdateDialog()
+                }
+            )
+        }
     }
 }
 

@@ -12,4 +12,10 @@
     <string name="log_walk_cta">Log a Walk</string>
     <string name="share_squad_cta">Invite Friends</string>
     <string name="sign_out">Sign Out</string>
+    <string name="update_available_title">New Update Ready!</string>
+    <string name="update_now_cta">Download Update</string>
+    <string name="update_later_cta">Later</string>
+    <string name="update_open_page_cta">Open Download Page</string>
+    <string name="check_updates_cta">Check GitHub for Updates</string>
+    <string name="checking_updates_cta">Checking GitHub…</string>
 </resources>

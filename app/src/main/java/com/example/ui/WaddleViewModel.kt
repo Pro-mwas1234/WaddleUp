@@ -3,6 +3,8 @@ package com.example.ui
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.AppUpdateChecker
+import com.example.data.AppUpdateState
 import com.example.data.StepSensorTracker
 import com.example.data.StepTrackerState
 import com.example.data.WaddleRepository
@@ -65,6 +67,12 @@ class WaddleViewModel(
 
     private val _activeCelebration = MutableStateFlow<CelebrationEvent?>(null)
     val activeCelebration: StateFlow<CelebrationEvent?> = _activeCelebration.asStateFlow()
+
+    private val _updateState = MutableStateFlow<AppUpdateState>(AppUpdateState.Idle)
+    val updateState: StateFlow<AppUpdateState> = _updateState.asStateFlow()
+
+    private val _showUpdateDialog = MutableStateFlow(false)
+    val showUpdateDialog: StateFlow<Boolean> = _showUpdateDialog.asStateFlow()
 
     private val celebrationQueue = ArrayDeque<CelebrationEvent>()
 
@@ -488,6 +496,46 @@ class WaddleViewModel(
                 _events.tryEmit(err.message ?: "Failed to save profile")
             }
         }
+    }
+
+    fun checkForUpdates(
+        manual: Boolean,
+        isSkippedTag: (String) -> Boolean = { false }
+    ) {
+        if (_updateState.value is AppUpdateState.Checking) return
+        viewModelScope.launch {
+            _updateState.value = AppUpdateState.Checking
+            val result = AppUpdateChecker.checkForUpdate()
+            _updateState.value = result
+            when (result) {
+                is AppUpdateState.UpdateAvailable -> {
+                    if (manual || !isSkippedTag(result.release.tagName)) {
+                        _showUpdateDialog.value = true
+                    }
+                }
+                is AppUpdateState.UpToDate -> {
+                    if (manual) {
+                        _events.tryEmit("You're already on the latest WaddleUp (v${result.currentVersion})!")
+                    }
+                }
+                is AppUpdateState.Error -> {
+                    if (manual) {
+                        _events.tryEmit("Couldn't reach GitHub right now. Try again in a moment.")
+                    }
+                }
+                else -> Unit
+            }
+        }
+    }
+
+    fun openUpdateDialog() {
+        if (_updateState.value is AppUpdateState.UpdateAvailable) {
+            _showUpdateDialog.value = true
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        _showUpdateDialog.value = false
     }
 
     private fun unwrapFirestoreError(error: Throwable): FirebaseFirestoreException? =
