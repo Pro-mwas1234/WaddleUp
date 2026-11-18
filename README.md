@@ -122,16 +122,25 @@ FIRESTORE_EMULATOR_HOST="127.0.0.1:8085" node --test firestore.test.js
 
 ## 📦 GitHub Actions Release Workflow
 
-The workflow in `.github/workflows/release.yml` runs unit tests, builds both a signed **Release APK** (`waddleup-<tag>.apk`) and **Android App Bundle** (`waddleup-<tag>.aab`), uploads them as workflow artifacts, and publishes a **GitHub Release**.
+The workflow in `.github/workflows/release.yml` runs unit tests, builds both a signed **Release APK** (`waddleup-<tag>.apk` + `waddleup-latest.apk`) and **Android App Bundle** (`waddleup-<tag>.aab`), uploads them as workflow artifacts, publishes a **GitHub Release**, and deploys the auto-updating download website (`docs/`) to **GitHub Pages**.
 
 ### Triggering a Release
-- **Auto-release on changes**: Pushing commits to `main` or `master` automatically runs tests, builds the APK & AAB, and publishes a GitHub Release (`v1.0.0` initially, then auto-incrementing patch versions `v1.0.1`, `v1.0.2`, ...).
+- **Auto-release on changes**: Pushing commits to `main` or `master` automatically runs tests, builds the APK & AAB, publishes a GitHub Release (`v1.0.1` initially, then auto-incrementing patch versions `v1.0.2`, `v1.0.3`, ...), and updates the download website.
 - **Tag push**: Push any `v*` tag for an explicit version:
   ```bash
   git tag v1.0.0
   git push origin v1.0.0
   ```
 - **Manual dispatch**: Run **Release Android App** from the **Actions** tab in GitHub (optionally specifying a `release_tag` and toggling `publish_release`).
+
+### Direct Download Website (GitHub Pages)
+The static download page lives in `docs/` (`index.html`, `styles.css`, `app.js`, `releases.json`) and automatically stays synced with every release in two ways:
+1. After each release publishes, the `deploy-website` job writes the latest release metadata & APK SHA-256 into `docs/releases.json` and deploys to GitHub Pages.
+2. On page load, `docs/app.js` also queries GitHub's live Releases API and falls back to the permanent latest APK link (`https://github.com/<owner>/<repo>/releases/latest/download/waddleup-latest.apk`).
+
+To enable the live site once on GitHub:
+1. Open **Settings → Pages** in your GitHub repository.
+2. Under **Build and deployment → Source**, choose **GitHub Actions** (or **Deploy from a branch** → `main` / `/docs`).
 
 ### Repository Secrets (for Production Signing)
 Configure these in **Settings → Secrets and variables → Actions** (matching the `release` signing config in `app/build.gradle.kts` with `keyAlias = "upload"`):

@@ -21,6 +21,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -30,6 +32,9 @@ jobs:
   build-and-release:
     name: Test, Build & Publish Release
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      apk_sha256: ${{ steps.artifacts.outputs.apk_sha256 }}
     env:
       GRADLE_OPTS: -Djava.net.preferIPv4Stack=true
 
@@ -219,10 +224,15 @@ jobs:
           fi
 
           cp "$APK_PATH" "${STAGE_DIR}/waddleup-${TAG}.apk"
+          cp "$APK_PATH" "${STAGE_DIR}/waddleup-latest.apk"
           cp "$AAB_PATH" "${STAGE_DIR}/waddleup-${TAG}.aab"
 
+          APK_SHA256=$(sha256sum "${STAGE_DIR}/waddleup-${TAG}.apk" | awk '{print $1}')
+
           echo "apk=${STAGE_DIR}/waddleup-${TAG}.apk" >> "$GITHUB_OUTPUT"
+          echo "latest_apk=${STAGE_DIR}/waddleup-latest.apk" >> "$GITHUB_OUTPUT"
           echo "aab=${STAGE_DIR}/waddleup-${TAG}.aab" >> "$GITHUB_OUTPUT"
+          echo "apk_sha256=${APK_SHA256}" >> "$GITHUB_OUTPUT"
           echo "dir=${STAGE_DIR}" >> "$GITHUB_OUTPUT"
 
       - name: Upload workflow artifacts
@@ -245,9 +255,112 @@ jobs:
           body: |
             ## 🦆 WaddleUp ${{ steps.meta.outputs.tag }}
             - **`waddleup-${{ steps.meta.outputs.tag }}.apk`** — Direct Android installer
+            - **`waddleup-latest.apk`** — Permanent latest APK alias
             - **`waddleup-${{ steps.meta.outputs.tag }}.aab`** — Android App Bundle for Google Play
+
+            **APK SHA-256:** `${{ steps.artifacts.outputs.apk_sha256 }}`
 
             ${{ steps.signing.outputs.mode == 'custom' && '✅ Signed with configured `RELEASE_KEYSTORE_BASE64` upload keystore.' || (steps.signing.outputs.mode == 'persistent_project_key' && '✅ Signed with persistent project signing key (supports in-place updates and registered Firebase Google Sign-In).' || '> ⚠️ **Note:** Built with an ephemeral CI signing key because neither `RELEASE_KEYSTORE_BASE64` nor `debug.keystore.base64` was found.') }}
           files: |
             ${{ steps.artifacts.outputs.apk }}
+            ${{ steps.artifacts.outputs.latest_apk }}
             ${{ steps.artifacts.outputs.aab }}
+
+  deploy-website:
+    name: Update & Deploy Download Website
+    needs: build-and-release
+    if: success() && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_release))
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Sync website assets & release snapshot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_SLUG: ${{ github.repository }}
+          LATEST_TAG: ${{ needs.build-and-release.outputs.tag }}
+          LATEST_APK_SHA256: ${{ needs.build-and-release.outputs.apk_sha256 }}
+        shell: bash
+        run: |
+          mkdir -p docs/assets
+          [[ -f app/src/main/res/drawable/ic_waddle_icon_fg.png ]] && cp app/src/main/res/drawable/ic_waddle_icon_fg.png docs/assets/waddleup-icon.png
+          [[ -f app/src/main/res/drawable/img_waddle_hero_1794947415157.jpg ]] && cp app/src/main/res/drawable/img_waddle_hero_1794947415157.jpg docs/assets/waddleup-hero.jpg
+          [[ -f app/src/main/res/drawable/img_podium_crown_1794947415835.jpg ]] && cp app/src/main/res/drawable/img_podium_crown_1794947415835.jpg docs/assets/waddleup-podium.jpg
+
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          import urllib.request
+
+          repo = os.environ["REPO_SLUG"]
+          token = os.environ.get("GH_TOKEN", "")
+          latest_tag = os.environ.get("LATEST_TAG", "")
+          latest_sha = os.environ.get("LATEST_APK_SHA256", "")
+
+          url = f"https://api.github.com/repos/{repo}/releases?per_page=12"
+          req = urllib.request.Request(
+              url,
+              headers={
+                  "Accept": "application/vnd.github+json",
+                  "User-Agent": "WaddleUp-Pages-Builder",
+                  **({"Authorization": f"Bearer {token}"} if token else {}),
+              },
+          )
+          with urllib.request.urlopen(req, timeout=20) as resp:
+              releases = json.loads(resp.read().decode("utf-8"))
+
+          cleaned = []
+          for rel in releases:
+              if rel.get("draft"):
+                  continue
+              tag = rel.get("tag_name")
+              assets = [
+                  {
+                      "name": a.get("name"),
+                      "size": a.get("size"),
+                      "download_count": a.get("download_count"),
+                      "browser_download_url": a.get("browser_download_url"),
+                      "digest": a.get("digest"),
+                  }
+                  for a in rel.get("assets", [])
+                  if (a.get("name") or "").lower().endswith(".apk")
+              ]
+              entry = {
+                  "tag_name": tag,
+                  "name": rel.get("name"),
+                  "prerelease": bool(rel.get("prerelease")),
+                  "published_at": rel.get("published_at") or rel.get("created_at"),
+                  "html_url": rel.get("html_url"),
+                  "body": rel.get("body") or "",
+                  "assets": assets,
+              }
+              if tag == latest_tag and latest_sha:
+                  entry["apkSha256"] = latest_sha
+              cleaned.append(entry)
+
+          payload = {
+              "repo": repo,
+              "updatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "releases": cleaned,
+          }
+          with open("docs/releases.json", "w", encoding="utf-8") as fh:
+              json.dump(payload, fh, indent=2)
+          print(f"Wrote {len(cleaned)} releases to docs/releases.json")
+          PY
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
