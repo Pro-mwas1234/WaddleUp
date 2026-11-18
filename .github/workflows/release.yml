@@ -121,6 +121,8 @@ jobs:
           fi
           echo "Release tag: ${TAG}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "CI_VERSION_CODE=$((10 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "CI_VERSION_NAME=${TAG#v}" >> "$GITHUB_ENV"
 
       - name: Configure optional Firebase & .env secrets
         env:
@@ -129,7 +131,7 @@ jobs:
         shell: bash
         run: |
           if [[ -n "$GOOGLE_SERVICES_JSON_BASE64" ]]; then
-            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '\r' | base64 --decode > app/google-services.json
           elif [[ ! -f app/google-services.json ]]; then
             echo "::warning::app/google-services.json not found and GOOGLE_SERVICES_JSON_BASE64 secret not set. Build will compile, but Firebase/Google Sign-In requires google-services.json at runtime."
           fi
@@ -150,11 +152,13 @@ jobs:
         run: |
           KEYSTORE_FILE="${RUNNER_TEMP}/release-upload-key.jks"
           if [[ -n "$RELEASE_KEYSTORE_BASE64" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" ]]; then
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+            printf '%s' "$RELEASE_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$KEYSTORE_FILE"
             echo "KEYSTORE_PATH=${KEYSTORE_FILE}" >> "$GITHUB_ENV"
             echo "STORE_PASSWORD=${STORE_PASSWORD}" >> "$GITHUB_ENV"
             echo "KEY_PASSWORD=${KEY_PASSWORD}" >> "$GITHUB_ENV"
             echo "mode=custom" >> "$GITHUB_OUTPUT"
+            echo "Signing certificate fingerprint:"
+            keytool -list -v -keystore "$KEYSTORE_FILE" -alias upload -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" | grep -E "SHA1:|SHA256:" || true
           elif [[ -f debug.keystore.base64 || -f debug.keystore ]]; then
             SRC_KEYSTORE="${RUNNER_TEMP}/project-debug.keystore"
             if [[ -f debug.keystore.base64 ]]; then

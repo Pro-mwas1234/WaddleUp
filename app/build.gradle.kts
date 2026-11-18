@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.waddleup.kxpqzm"
     minSdk = 24
     targetSdk = 36
-    versionCode = 3
-    versionName = "1.0.2"
+    versionCode = System.getenv("CI_VERSION_CODE")?.toIntOrNull() ?: 3
+    versionName = System.getenv("CI_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.0.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
