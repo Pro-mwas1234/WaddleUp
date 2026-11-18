@@ -216,8 +216,11 @@ fun AuthScreen(
                                 errorMessage = msg
                             },
                             scope = scope,
-                            onAuthCancelled = {
+                            onAuthCancelled = { hint ->
                                 isLoading = false
+                                if (!hint.isNullOrBlank()) {
+                                    errorMessage = hint
+                                }
                             }
                         )
                     },

@@ -2,12 +2,16 @@ package com.example.auth
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import java.security.MessageDigest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -34,7 +38,32 @@ fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
     awaitClose { removeAuthStateListener(listener) }
 }
 
-private fun resolveDefaultWebClientId(context: Context): String? {
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+@Suppress("DEPRECATION")
+internal fun getSigningSha1(context: Context): String? = try {
+    val pm = context.packageManager
+    val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val info = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+        info.signingInfo?.let { signingInfo ->
+            if (signingInfo.hasMultipleSigners()) signingInfo.apkContentsSigners
+            else signingInfo.signingCertificateHistory
+        }
+    } else {
+        pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures
+    }
+    val certBytes = signatures?.firstOrNull()?.toByteArray() ?: return null
+    val digest = MessageDigest.getInstance("SHA-1").digest(certBytes)
+    digest.joinToString(":") { byte -> "%02X".format(byte) }
+} catch (_: Exception) {
+    null
+}
+
+internal fun resolveDefaultWebClientId(context: Context): String? {
     val resId = context.resources.getIdentifier(
         "default_web_client_id",
         "string",
@@ -72,9 +101,10 @@ fun attemptAutoSignIn(
     val request = GetCredentialRequest.Builder()
         .addCredentialOption(googleIdOption)
         .build()
+    val launchContext = context.findActivity() ?: context
     scope.launch {
         try {
-            val result = credentialManager.getCredential(context, request)
+            val result = credentialManager.getCredential(launchContext, request)
             val cred = result.credential
             if (cred is CustomCredential && cred.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val token = GoogleIdTokenCredential.createFrom(cred.data).idToken
@@ -95,14 +125,14 @@ fun onGoogleSignInClicked(
     onAuthSuccess: () -> Unit,
     onAuthError: (String) -> Unit,
     scope: CoroutineScope,
-    onAuthCancelled: () -> Unit = {}
+    onAuthCancelled: (String?) -> Unit = {}
 ) {
-    val activity = context as? Activity
+    val activity = context.findActivity()
     if (activity == null) {
         onAuthError("Unable to launch Google Sign-In without an Activity context.")
         return
     }
-    val clientId = resolveDefaultWebClientId(context)
+    val clientId = resolveDefaultWebClientId(activity)
     if (clientId == null) {
         onAuthError("Google Sign-In configuration missing: default_web_client_id not found")
         return
@@ -122,8 +152,15 @@ fun onGoogleSignInClicked(
                 onAuthError("Unexpected credential type received.")
             }
         } catch (e: GetCredentialCancellationException) {
-            Log.w("Auth", "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
-            onAuthCancelled()
+            val sha1 = getSigningSha1(activity)
+            Log.w("Auth", "Google Sign-In flow cancelled or dismissed (sha1=$sha1): ${e.message}", e)
+            val diagnostic = buildString {
+                append("Sign-in did not complete.")
+                if (!sha1.isNullOrBlank()) {
+                    append(" If it closed right after picking an account, verify this APK's SHA-1 ($sha1) is registered in Firebase.")
+                }
+            }
+            onAuthCancelled(diagnostic)
         } catch (e: Exception) {
             Log.e("Auth", "Google Sign-In failed", e)
             onAuthError(e.localizedMessage ?: "Sign in failed. Please try again.")
