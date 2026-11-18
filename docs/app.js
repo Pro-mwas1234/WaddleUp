@@ -47,18 +47,18 @@
   }
 
   function formatReleaseDate(isoDate, nowMs = Date.now()) {
-    if (!isoDate) return 'Auto-updated';
+    if (!isoDate) return 'Android 7.0+';
     const parsed = Date.parse(isoDate);
-    if (Number.isNaN(parsed)) return 'Auto-updated';
+    if (Number.isNaN(parsed)) return 'Android 7.0+';
 
     const diffMs = Math.max(0, nowMs - parsed);
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffHours < 1) return 'Updated just now';
+    if (diffHours < 24) return `Updated ${diffHours}h ago`;
+    if (diffDays === 1) return 'Updated yesterday';
+    if (diffDays < 7) return `Updated ${diffDays}d ago`;
 
     return new Date(parsed).toLocaleDateString('en-US', {
       month: 'short',
@@ -78,7 +78,6 @@
     );
     if (apks.length === 0) return null;
 
-    // Prefer the versioned APK filename (e.g. waddleup-v1.0.3.apk) over waddleup-latest.apk
     return (
       apks.find((asset) => asset.name.toLowerCase() !== 'waddleup-latest.apk') ||
       apks[0]
@@ -243,7 +242,7 @@
     toast.textContent = message;
     toast.classList.add('visible');
     clearTimeout(showToast._timer);
-    showToast._timer = setTimeout(() => toast.classList.remove('visible'), 2400);
+    showToast._timer = setTimeout(() => toast.classList.remove('visible'), 2200);
   }
 
   async function copyText(text, successLabel) {
@@ -270,13 +269,10 @@
     const latestApk = `${base}/releases/latest/download/waddleup-latest.apk`;
 
     const ids = {
-      'header-download-btn': latestApk,
       'primary-download-btn': latestApk,
       'github-release-link': `${base}/releases/latest`,
       'all-releases-link': `${base}/releases`,
       'footer-repo-link': base,
-      'footer-direct-link': latestApk,
-      'footer-releases-link': `${base}/releases`,
     };
 
     Object.entries(ids).forEach(([id, href]) => {
@@ -288,12 +284,10 @@
   function renderLatest(latest, repo, sourceLabel) {
     const syncLabel = document.getElementById('sync-status-label');
     const versionPill = document.getElementById('latest-version-pill');
-    const statVersion = document.getElementById('stat-version');
     const statSize = document.getElementById('stat-size');
     const statDate = document.getElementById('stat-date');
     const primaryBtn = document.getElementById('primary-download-btn');
     const primaryLabel = document.getElementById('primary-download-label');
-    const headerBtn = document.getElementById('header-download-btn');
     const releaseLink = document.getElementById('github-release-link');
     const changelogTitle = document.getElementById('changelog-title');
     const changelogBody = document.getElementById('changelog-body');
@@ -305,13 +299,12 @@
     if (!latest) {
       if (changelogBody) {
         changelogBody.innerHTML =
-          '<p>No published GitHub Releases found yet. Once your first release finishes building, this page updates automatically.</p>';
+          '<p>Once your next GitHub Release finishes building, version details and release notes appear here automatically.</p>';
       }
       return `https://github.com/${repo}/releases/latest/download/waddleup-latest.apk`;
     }
 
     if (versionPill) versionPill.textContent = latest.tag;
-    if (statVersion) statVersion.textContent = latest.tag;
     if (statSize) statSize.textContent = formatBytes(latest.apkSize);
     if (statDate) statDate.textContent = formatReleaseDate(latest.publishedAt);
 
@@ -320,18 +313,13 @@
       primaryBtn.setAttribute('download', latest.apkName);
     }
     if (primaryLabel) {
-      primaryLabel.textContent = `Download ${latest.tag} APK`;
-    }
-    if (headerBtn) {
-      headerBtn.href = latest.apkUrl;
-      headerBtn.setAttribute('download', latest.apkName);
-      headerBtn.textContent = `Get ${latest.tag}`;
+      primaryLabel.textContent = `Download APK (${latest.tag})`;
     }
     if (releaseLink) {
       releaseLink.href = latest.htmlUrl;
     }
     if (changelogTitle) {
-      changelogTitle.textContent = `${latest.name} Notes`;
+      changelogTitle.textContent = latest.name;
     }
     if (changelogBody) {
       changelogBody.innerHTML = renderReleaseNotesHtml(latest.body);
@@ -340,8 +328,8 @@
     if (shaBtn && shaPreview) {
       if (latest.apkSha256) {
         shaBtn.hidden = false;
-        shaPreview.textContent = `${latest.apkSha256.slice(0, 12)}…`;
-        shaBtn.onclick = () => copyText(latest.apkSha256, 'APK SHA-256 copied');
+        shaPreview.textContent = `${latest.apkSha256.slice(0, 10)}…`;
+        shaBtn.onclick = () => copyText(latest.apkSha256, 'SHA-256 copied');
       } else {
         shaBtn.hidden = true;
       }
@@ -350,84 +338,44 @@
     return latest.apkUrl;
   }
 
-  function renderReleaseList(releases, latestTag) {
-    const container = document.getElementById('releases-list');
-    if (!container) return;
+  function renderOlderReleases(releases, latestTag) {
+    const wrap = document.getElementById('older-releases-wrap');
+    const list = document.getElementById('releases-list');
+    if (!wrap || !list) return;
 
-    if (!releases || releases.length === 0) {
-      container.innerHTML =
-        '<div class="empty-state">No published releases yet. Use the direct download button once your first GitHub Release publishes.</div>';
+    const older = (releases || []).filter((r) => r.tag !== latestTag);
+    if (older.length === 0) {
+      wrap.hidden = true;
       return;
     }
 
-    container.innerHTML = '';
+    wrap.hidden = false;
+    list.innerHTML = '';
 
-    releases.forEach((rel, index) => {
-      const card = document.createElement('article');
-      card.className = 'release-item';
-
-      const head = document.createElement('div');
-      head.className = 'release-item-head';
+    older.forEach((rel) => {
+      const row = document.createElement('div');
+      row.className = 'release-row';
 
       const meta = document.createElement('div');
-      meta.className = 'release-item-meta';
+      meta.className = 'release-row-meta';
 
-      const title = document.createElement('span');
-      title.className = 'release-item-title';
-      title.textContent = rel.name;
-      meta.appendChild(title);
+      const name = document.createElement('strong');
+      name.textContent = rel.tag;
+      meta.appendChild(name);
 
-      if (rel.tag === latestTag) {
-        const badge = document.createElement('span');
-        badge.className = 'pill pill-live';
-        badge.textContent = 'Latest';
-        meta.appendChild(badge);
-      } else if (rel.prerelease) {
-        const badge = document.createElement('span');
-        badge.className = 'pill pill-android';
-        badge.textContent = 'Pre-release';
-        meta.appendChild(badge);
-      }
+      const details = document.createElement('span');
+      details.textContent = `${formatReleaseDate(rel.publishedAt)} • ${formatBytes(rel.apkSize)}`;
+      meta.appendChild(details);
 
-      const sub = document.createElement('span');
-      sub.className = 'release-item-sub';
-      const parts = [formatReleaseDate(rel.publishedAt), formatBytes(rel.apkSize)];
-      if (rel.downloads > 0) parts.push(`${rel.downloads} downloads`);
-      sub.textContent = parts.join(' • ');
-      meta.appendChild(sub);
+      const dl = document.createElement('a');
+      dl.className = 'release-row-dl';
+      dl.href = rel.apkUrl;
+      dl.setAttribute('download', rel.apkName);
+      dl.textContent = 'Download APK';
 
-      const actions = document.createElement('div');
-      actions.className = 'release-item-actions';
-
-      const dlBtn = document.createElement('a');
-      dlBtn.className = 'btn btn-primary btn-sm';
-      dlBtn.href = rel.apkUrl;
-      dlBtn.setAttribute('download', rel.apkName);
-      dlBtn.textContent = `Download ${rel.tag}`;
-      actions.appendChild(dlBtn);
-
-      const notesBtn = document.createElement('button');
-      notesBtn.className = 'btn btn-secondary btn-sm';
-      notesBtn.type = 'button';
-      notesBtn.textContent = index === 0 ? 'Hide Notes' : 'Notes';
-      actions.appendChild(notesBtn);
-
-      const notesBox = document.createElement('div');
-      notesBox.className = 'release-item-notes changelog-body';
-      notesBox.hidden = index !== 0;
-      notesBox.innerHTML = renderReleaseNotesHtml(rel.body);
-
-      notesBtn.addEventListener('click', () => {
-        const isHidden = notesBox.hidden;
-        notesBox.hidden = !isHidden;
-        notesBtn.textContent = isHidden ? 'Hide Notes' : 'Notes';
-      });
-
-      head.appendChild(meta);
-      head.appendChild(actions);
-      card.appendChild(head);
-      card.appendChild(notesBox);
-      container.appendChild(card);
+      row.appendChild(meta);
+      row.appendChild(dl);
+      list.appendChild(row);
     });
   }
 
@@ -437,7 +385,7 @@
 
     const footerMeta = document.getElementById('footer-meta');
     if (footerMeta) {
-      footerMeta.textContent = `WaddleUp Android • ${repo} • Auto-updated with GitHub Releases`;
+      footerMeta.textContent = `WaddleUp Android • ${repo}`;
     }
 
     let currentDirectUrl = `https://github.com/${repo}/releases/latest/download/waddleup-latest.apk`;
@@ -445,26 +393,6 @@
     const copyBtn = document.getElementById('copy-link-btn');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => copyText(currentDirectUrl, 'Direct APK link copied'));
-    }
-
-    const shareBtn = document.getElementById('share-btn');
-    if (shareBtn) {
-      shareBtn.addEventListener('click', async () => {
-        const shareData = {
-          title: 'WaddleUp Android APK',
-          text: 'Download the latest WaddleUp Android build directly:',
-          url: window.location.href,
-        };
-        if (navigator.share) {
-          try {
-            await navigator.share(shareData);
-            return;
-          } catch (_) {
-            // Fall through to copy page link
-          }
-        }
-        copyText(window.location.href, 'Download page URL copied');
-      });
     }
 
     const [snapshotData, liveData] = await Promise.all([
@@ -480,11 +408,11 @@
     const sourceLabel = liveReleases.length > 0
       ? 'Live from GitHub Releases'
       : snapshotReleases.length > 0
-        ? 'Synced from Release Snapshot'
-        : 'Direct Latest APK Ready';
+        ? 'Synced with Latest Release'
+        : 'Auto-updated with GitHub Releases';
 
     currentDirectUrl = renderLatest(latest, repo, sourceLabel);
-    renderReleaseList(releases, latest ? latest.tag : null);
+    renderOlderReleases(releases, latest ? latest.tag : null);
   }
 
   return {

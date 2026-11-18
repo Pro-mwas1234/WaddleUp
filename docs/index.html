@@ -3,322 +3,175 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WaddleUp — Direct Android APK Download</title>
+  <title>WaddleUp — Download Android App</title>
   <meta
     name="description"
-    content="Download the latest WaddleUp Android APK directly. Track real daily steps, unlock mystery power-up crates, customize your cartoon avatar, and compete in friend squads."
+    content="Download the latest WaddleUp Android APK directly. Track real steps, crack power-up crates, customize your cartoon avatar, and compete in friend squads."
   />
   <meta name="theme-color" content="#FF5A1F" />
-  <meta property="og:title" content="WaddleUp — Direct Android APK Download" />
+  <meta property="og:title" content="WaddleUp — Download Android App" />
   <meta
     property="og:description"
-    content="Every silly step counts. Grab the latest signed WaddleUp Android APK directly from the official releases."
+    content="Every silly step counts. Grab the latest WaddleUp Android APK directly."
   />
-  <meta property="og:image" content="assets/waddleup-hero.jpg" />
+  <meta property="og:image" content="assets/waddleup-icon.png" />
   <link rel="icon" type="image/png" href="assets/waddleup-icon.png" />
   <link rel="apple-touch-icon" href="assets/waddleup-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="#top">
-        <img class="brand-icon" src="assets/waddleup-icon.png" alt="WaddleUp duck mascot icon" />
-        <span class="brand-name">WaddleUp</span>
-      </a>
-      <nav class="nav-links" aria-label="Primary navigation">
-        <a class="nav-link hide-mobile" href="#install">How to Install</a>
-        <a class="nav-link hide-mobile" href="#features">Features</a>
-        <a class="nav-link hide-mobile" href="#releases">Releases</a>
+  <main class="page">
+    <!-- App Hero: Logo, Name, Tagline & Direct Download -->
+    <section class="hero container">
+      <img
+        class="app-logo"
+        src="assets/waddleup-icon.png"
+        alt="WaddleUp app logo"
+        width="104"
+        height="104"
+      />
+
+      <h1 class="app-title">WaddleUp</h1>
+      <p class="app-tagline">
+        Track real steps, crack mystery power-up crates, and compete on friend squad leaderboards.
+      </p>
+
+      <div class="download-wrap">
         <a
-          id="header-download-btn"
-          class="nav-link nav-cta"
+          id="primary-download-btn"
+          class="download-btn"
           href="https://github.com/Pro-mwas1234/WaddleUp/releases/latest/download/waddleup-latest.apk"
         >
-          Get APK
-        </a>
-      </nav>
-    </div>
-  </header>
-
-  <main id="top">
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-card">
-          <div>
-            <div class="status-row">
-              <span class="pill pill-live">
-                <span class="live-dot" aria-hidden="true"></span>
-                <span id="sync-status-label">Synced with Releases</span>
-              </span>
-              <span id="latest-version-pill" class="pill pill-version font-mono-badge">Latest Release</span>
-              <span class="pill pill-android">Android 7.0+</span>
-            </div>
-
-            <h1 class="hero-title" style="margin-top: 16px;">
-              Every silly step <span class="accent">counts.</span>
-            </h1>
-            <p class="hero-subtitle">
-              Track real steps, crack open mystery power-up crates, customize a chaotic cartoon avatar,
-              and roast your friends on live squad leaderboards.
-            </p>
-          </div>
-
-          <div class="download-box">
-            <div class="release-stats">
-              <div class="stat-tile">
-                <span class="stat-label">Version</span>
-                <span id="stat-version" class="stat-value font-mono-badge">Latest</span>
-              </div>
-              <div class="stat-tile">
-                <span class="stat-label">APK Size</span>
-                <span id="stat-size" class="stat-value font-mono-badge">Direct APK</span>
-              </div>
-              <div class="stat-tile">
-                <span class="stat-label">Updated</span>
-                <span id="stat-date" class="stat-value">Auto-updated</span>
-              </div>
-            </div>
-
-            <div class="cta-row">
-              <a
-                id="primary-download-btn"
-                class="btn btn-primary"
-                href="https://github.com/Pro-mwas1234/WaddleUp/releases/latest/download/waddleup-latest.apk"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M12 3V15M12 15L7 10M12 15L17 10M4 17V19C4 20.1046 4.89543 21 6 21H18C19.1046 21 20 20.1046 20 19V17"
-                    stroke="currentColor"
-                    stroke-width="2.4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                <span id="primary-download-label">Download Latest APK</span>
-              </a>
-
-              <button id="copy-link-btn" class="btn btn-secondary" type="button">
-                Copy Direct Link
-              </button>
-
-              <button id="share-btn" class="btn btn-secondary" type="button">
-                Share
-              </button>
-            </div>
-
-            <div class="direct-link-bar">
-              <a
-                id="github-release-link"
-                href="https://github.com/Pro-mwas1234/WaddleUp/releases/latest"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View release on GitHub &rarr;
-              </a>
-
-              <button
-                id="sha-copy-btn"
-                class="sha-chip font-mono-badge"
-                type="button"
-                hidden
-                title="Copy APK SHA-256 checksum"
-              >
-                <span>SHA-256:</span>
-                <span id="sha-preview"></span>
-              </button>
-            </div>
-
-            <div class="update-note">
-              <span aria-hidden="true">🔄</span>
-              <span>
-                Already have WaddleUp installed? Download the newest APK and tap
-                <strong>Update</strong> — your steps, avatar, and squads stay intact.
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="hero-visual">
-          <div class="hero-art-card">
-            <img
-              class="hero-art-img"
-              src="assets/waddleup-hero.jpg"
-              alt="WaddleUp cartoon duck jogging past a snail and a grumpy toaster"
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 3V15M12 15L7 10M12 15L17 10M4 17V19C4 20.1046 4.89543 21 6 21H18C19.1046 21 20 20.1046 20 19V17"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             />
-            <div class="hero-art-caption">
-              <div>
-                <strong>Signed Direct Android Build</strong>
-                <span>Always points to the newest GitHub Release APK</span>
-              </div>
-              <a
-                id="refresh-btn"
-                class="btn btn-secondary btn-sm"
-                href="#releases"
-              >
-                All Builds
-              </a>
-            </div>
-          </div>
+          </svg>
+          <span id="primary-download-label">Download APK</span>
+        </a>
 
-          <article class="panel-card changelog-card" aria-live="polite">
-            <div>
-              <span class="section-kicker">What's New</span>
-              <h2 id="changelog-title" style="margin-top: 4px; font-size: 1.3rem;">Latest Release Notes</h2>
-            </div>
-            <div id="changelog-body" class="changelog-body">
-              <p>Fetching the latest release notes from GitHub Releases…</p>
-            </div>
-          </article>
+        <p class="version-meta">
+          <span id="latest-version-pill" class="version-badge">Latest</span>
+          <span id="stat-size">Direct APK</span>
+          <span>&bull;</span>
+          <span id="stat-date">Android 7.0+</span>
+        </p>
+
+        <div class="quick-links">
+          <button id="copy-link-btn" class="text-link" type="button">Copy direct link</button>
+          <span aria-hidden="true">&middot;</span>
+          <a
+            id="github-release-link"
+            class="text-link"
+            href="https://github.com/Pro-mwas1234/WaddleUp/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Release notes
+          </a>
+          <span aria-hidden="true">&middot;</span>
+          <button
+            id="sha-copy-btn"
+            class="text-link"
+            type="button"
+            hidden
+          >
+            SHA-256: <span id="sha-preview"></span>
+          </button>
         </div>
       </div>
     </section>
 
-    <section id="install" class="section">
-      <div class="container">
-        <div class="section-header">
-          <div>
-            <span class="section-kicker">Quick Setup</span>
-            <h2 class="section-title">Install on Android in 30 Seconds</h2>
-            <p class="section-desc">No Play Store wait needed — grab the signed APK straight from your phone browser.</p>
+    <!-- Inside-App Screenshots -->
+    <section class="screenshots container" aria-label="Inside the app screenshots">
+      <div class="shots-row">
+        <figure class="shot-card">
+          <div class="phone-frame">
+            <img
+              src="assets/screen-today.jpg"
+              alt="WaddleUp Today screen showing daily step ring, rank, and power-up crates"
+              loading="eager"
+            />
           </div>
-        </div>
+          <figcaption>Daily steps &amp; power-up crates</figcaption>
+        </figure>
 
-        <div class="steps-grid">
-          <div class="step-card">
-            <span class="step-number">1</span>
-            <h3>Tap Download Latest APK</h3>
-            <p>
-              Tap the orange download button above on your Android phone to save the newest
-              <span class="font-mono-badge">.apk</span> installer directly.
-            </p>
+        <figure class="shot-card">
+          <div class="phone-frame">
+            <img
+              src="assets/screen-ranks.jpg"
+              alt="WaddleUp Squad Standings screen showing friend leaderboard and Nudge buttons"
+              loading="eager"
+            />
           </div>
-          <div class="step-card">
-            <span class="step-number">2</span>
-            <h3>Open &amp; Allow Once</h3>
-            <p>
-              Tap the downloaded file in your browser or notification bar. If Android prompts you, allow
-              <strong>Install unknown apps</strong> for your browser.
-            </p>
+          <figcaption>Friend squad leaderboards</figcaption>
+        </figure>
+
+        <figure class="shot-card">
+          <div class="phone-frame">
+            <img
+              src="assets/screen-avatar.jpg"
+              alt="WaddleUp Avatar Studio screen for customizing your cartoon duck avatar"
+              loading="eager"
+            />
           </div>
-          <div class="step-card">
-            <span class="step-number">3</span>
-            <h3>Sign In &amp; Waddle</h3>
-            <p>
-              Tap <strong>Install</strong> (or <strong>Update</strong>), sign in with Google, grant step
-              sensor access, and join a squad with a 6-letter code.
-            </p>
-          </div>
-        </div>
+          <figcaption>Cartoon avatar designer</figcaption>
+        </figure>
       </div>
     </section>
 
-    <section id="features" class="section">
-      <div class="container">
-        <div class="section-header">
+    <!-- Compact Release Info -->
+    <section class="release-info container">
+      <div class="release-card">
+        <div class="release-card-top">
           <div>
-            <span class="section-kicker">Inside the App</span>
-            <h2 class="section-title">Why Walk Quietly When You Can Waddle?</h2>
-          </div>
-        </div>
-
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-emoji" aria-hidden="true">👟</div>
-            <div>
-              <h3>Real Step Counter + Funny Presets</h3>
-              <p>
-                Uses Android's hardware pedometer plus quick manual walks like
-                <em>Fridge-to-Couch Roundtrip</em> and absurd distance translations.
-              </p>
-            </div>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-emoji" aria-hidden="true">🎁</div>
-            <div>
-              <h3>Mystery Power-Up Crates</h3>
-              <p>
-                Earn crates every 1,000 steps and crack open <em>Rocket Boost</em>, <em>Disco Fever</em>,
-                and <em>Snack Magnet</em> multipliers synced live to squads.
-              </p>
-            </div>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-emoji" aria-hidden="true">🦆</div>
-            <div>
-              <h3>Cartoon Avatar Studio</h3>
-              <p>
-                Mix body colors, goofy faces, hairstyles, animated googly eyes, or hit
-                <strong>Chaos</strong> for a brand-new dancer on milestone celebrations.
-              </p>
-            </div>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-emoji" aria-hidden="true">🏆</div>
-            <div>
-              <h3>Squads, Leaderboards &amp; Nudges</h3>
-              <p>
-                Create a squad with a 6-character invite code, track daily &amp; weekly standings, and
-                send <em>Quack Attack</em> heckles to friends.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="releases" class="section">
-      <div class="container">
-        <div class="section-header">
-          <div>
-            <span class="section-kicker">Auto-Updated History</span>
-            <h2 class="section-title">All Recent Releases</h2>
-            <p class="section-desc">
-              Every push to <span class="font-mono-badge">main</span> builds, signs, and publishes a new release here automatically.
-            </p>
+            <span class="kicker" id="sync-status-label">Auto-updated with GitHub Releases</span>
+            <h2 id="changelog-title">Latest Release</h2>
           </div>
           <a
             id="all-releases-link"
-            class="btn btn-secondary btn-sm"
+            class="text-link"
             href="https://github.com/Pro-mwas1234/WaddleUp/releases"
             target="_blank"
             rel="noopener noreferrer"
           >
-            GitHub Releases &nearrow;
+            All releases &rarr;
           </a>
         </div>
 
-        <div id="releases-list" class="releases-list">
-          <div class="empty-state">Loading recent builds…</div>
+        <div id="changelog-body" class="changelog-body">
+          <p>Fetching latest release details…</p>
         </div>
+
+        <details id="older-releases-wrap" class="older-releases" hidden>
+          <summary>Previous versions</summary>
+          <div id="releases-list" class="releases-list"></div>
+        </details>
       </div>
+
+      <p class="install-hint">
+        Open the downloaded <code>.apk</code> on your Android phone and allow installs from your browser once.
+        Future updates install right over your existing app.
+      </p>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-links">
-        <a id="footer-repo-link" href="https://github.com/Pro-mwas1234/WaddleUp" target="_blank" rel="noopener noreferrer">
-          Source Code
-        </a>
-        <a id="footer-direct-link" href="https://github.com/Pro-mwas1234/WaddleUp/releases/latest/download/waddleup-latest.apk">
-          Permanent Latest APK URL
-        </a>
-        <a id="footer-releases-link" href="https://github.com/Pro-mwas1234/WaddleUp/releases" target="_blank" rel="noopener noreferrer">
-          Release Archive
-        </a>
-      </div>
-      <p id="footer-meta">WaddleUp Android • Direct APK Distribution</p>
-    </div>
+  <footer class="footer container">
+    <span id="footer-meta">WaddleUp Android</span>
+    <span aria-hidden="true">&middot;</span>
+    <a id="footer-repo-link" href="https://github.com/Pro-mwas1234/WaddleUp" target="_blank" rel="noopener noreferrer">
+      GitHub
+    </a>
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
